@@ -4,16 +4,45 @@ require("dotenv").config();
 var request = require("request");
 var fs = require("fs");
 var keys = require("./keys.js");
+var moment = require('moment');
 var Spotify = require('node-spotify-api');
 var Twitter = require('twitter');
 var spotify = new Spotify(keys.spotify);
 //vars to capture user inputs.
-var userOption = process.argv[2]; 
+var userInput = process.argv[2]; 
 var inputParameter = process.argv[3];
 
-// IMDB FUNCTION
+// SWITCH STATEMENT
+var pick = function(caseData, functionData) {
+    switch(caseData) {
+        case 'my-tweets' :
+            getMyTweets();
+            break;
+        case 'spotify-this-song':
+            getMeSpotify(functionData);
+            break;
+        case 'movie-this':
+            showMovieInfo(functionData);
+        case 'concert-this':
+            showConcert(functionData);
+            break;
+        case 'do-what-it-says':
+            doWhatItSays();
+            break;
+        default:
+        console.log('Liri did not understand. Enter a valid command.');
+    }
+}
+
+var runThis = function(argOne, argTwo) {
+    pick(argOne, argTwo);
+};
+
+runThis(process.argv[2], process.argv[3]);
+
+// MOVIE-THIS
 function showMovieInfo(inputParameter){
-    if (inputParameter === undefined) {
+    if (inputParameter === undefined || null) {
         inputParameter = "Mr. Nobody"
         console.log("-----------------------");
         fs.appendFileSync("log.txt", "-----------------------\n");
@@ -35,8 +64,8 @@ function showMovieInfo(inputParameter){
         fs.appendFileSync("log.txt", "Release Year: " + movies.Year + "\n");
         console.log("IMDB Rating: " + movies.imdbRating);
         fs.appendFileSync("log.txt", "IMDB Rating: " + movies.imdbRating + "\n");
-        console.log("Rotten Tomatoes Rating: " + getRottenTomatoesRatingValue(movies));
-        fs.appendFileSync("log.txt", "Rotten Tomatoes Rating: " + getRottenTomatoesRatingValue(movies) + "\n");
+        console.log("Rotten Tomatoes Rating: " + movies.imdbRating);
+        fs.appendFileSync("log.txt", "Rotten Tomatoes Rating: " + movies.imdbRating + "\n");
         console.log("Country of Production: " + movies.Country);
         fs.appendFileSync("log.txt", "Country of Production: " + movies.Country + "\n");
         console.log("Language: " + movies.Language);
@@ -53,8 +82,8 @@ function showMovieInfo(inputParameter){
 
 });}
 
-// DO WHAT IT SAYS TXT READ
-var doWhatItSays = function() {
+// DO-WHAT-IT-SAYS
+function doWhatItSays() {
     fs.readFile('random.txt', 'utf8', (err, data) => {
         if (err) throw err;
         
@@ -68,8 +97,34 @@ var doWhatItSays = function() {
     });
 }
 
-// TWITTER FUNCTION
-var getMyTweets = function() {
+// CONCERT-THIS
+function showConcert(bandQuery) {
+    var queryUrl = "https://rest.bandsintown.com/artists/" + bandQuery + "/events?app_id=codingbootcamp#";
+  //URL test
+   // console.log(queryUrl);
+  request(queryUrl, function (error, response, body) {
+
+        // If the request is successful
+        if (!error && response.statusCode === 200) {
+
+            var concertData = JSON.parse(body);
+            var momentDT = moment().format('L');
+
+
+            console.log("===============================");
+            // * Name of the venue
+            console.log("Venue Name : " + concertData[0].venue.name +
+                // * Venue location
+                "\nVenue Location: " + concertData[0].venue.city + "," + concertData[0].venue.country +
+                //  * Date of the Event (use moment to format this as "MM/DD/YYYY")
+                "\nDate of the Event: " + momentDT +
+                "\n===============================");
+        };
+    });
+}
+
+// MY-TWEETS
+function getMyTweets() {
     var client = new Twitter(keys.twitterKeys);
     var params = {screen_name: 'tarkina3'};
     client.get('statuses/user_timeline', params, function(error, tweets, response) {
@@ -84,11 +139,12 @@ var getMyTweets = function() {
   });
 }
 
-// SPOTIFY FUNCTION
-var getArtistNames = function(artist) {
+// SPOTIFY-THIS-SONG
+function getArtistNames(artist) {
     return artist.name;
 }
-var getMeSpotify = function(songName) {
+
+function getMeSpotify(songName) {
     spotify.search({ type: 'track', query: songName }, function(err, data) {
         if ( err ) {
             console.log('Error occurred: ' + err);
@@ -105,27 +161,3 @@ var getMeSpotify = function(songName) {
         }
     });
 }
-
-var pick = function(caseData, functionData) {
-    switch(caseData) {
-        case 'my-tweets' :
-            getMyTweets();
-            break;
-        case 'spotify-this-song':
-            getMeSpotify(functionData);
-            break;
-        case 'movie-this':
-            showMovieInfo(functionData);
-        case 'do-what-it-says':
-            doWhatItSays();
-            break;
-        default:
-        console.log('Liri did not understand. Enter a valid command.');
-    }
-}
-
-var runThis = function(argOne, argTwo) {
-    pick(argOne, argTwo);
-};
-
-runThis(process.argv[2], process.argv[3]);
